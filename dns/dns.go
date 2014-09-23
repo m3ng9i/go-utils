@@ -27,7 +27,7 @@ func ARecords(domain, nameserver string, port uint16, net string, timeout ...uin
     var result []string
 
     if net != "tcp" && net != "udp" {
-        return result, errors.New("The Parameter 'net' should only be 'tcp' or 'udp'.")
+        return result, errors.New("The parameter 'net' should only be 'tcp' or 'udp'.")
     }
 
     msg := new(mdns.Msg)
