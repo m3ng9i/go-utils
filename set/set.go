@@ -56,7 +56,7 @@ func New() *Set {
 
 
 // Add item(s) to set.
-// If there's an item is not a legal type, return false
+// If there's an item that is not a legal type, return false
 // If success, return true
 func (s *Set) Add(items ...any) bool {
     s.Lock()
@@ -77,7 +77,7 @@ func (s *Set) Add(items ...any) bool {
 }
 
 
-// Add item(s) to set. if there's an item is not a legal type, panic
+// Add item(s) to set. if there's an item that is not a legal type, panic
 func (s *Set) MustAdd(items ...any) {
     if s.Add(items...) == false {
         value := fmt.Sprintf("%v", items)
