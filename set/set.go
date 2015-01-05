@@ -3,7 +3,6 @@ package set
 
 import "sync"
 import "fmt"
-import "reflect"
 import "strings"
 
 type any interface{}
@@ -16,35 +15,15 @@ type Set struct {
 
 // Judge if a variable could be a member of Set.
 func IsLegal(v any) bool {
-
-    legal := []string{  "bool",
-                        "byte",
-                        "complex128",
-                        "complex64",
-                        "error",
-                        "float32",
-                        "float64",
-                        "int",
-                        "int16",
-                        "int32",
-                        "int64",
-                        "int8",
-                        "rune",
-                        "string",
-                        "uint",
-                        "uint16",
-                        "uint32",
-                        "uint64",
-                        "uint8",
-                        "uintptr" }
-
-    t := reflect.TypeOf(v).Name()
-
-    for _, i := range(legal) {
-        if i == t {
-            return true
-        }
+    switch v.(type) {
+        // byte is alias of uint8, rune is alias of uint32,
+        // so byte and rune are not in case clause
+        case bool, error, string, complex64, complex128, float32, float64,
+             int, int8, int16, int32, int64,
+             uint, uint8, uint16, uint32, uint64, uintptr:
+                return true
     }
+
     return false
 }
 
