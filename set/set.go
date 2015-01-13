@@ -13,7 +13,7 @@ type Set struct {
 }
 
 
-// Judge if a variable could be a member of Set.
+// Determine if a variable could be a member of Set.
 func IsLegal(v any) bool {
     switch v.(type) {
         // byte is alias of uint8, rune is alias of uint32,
@@ -49,6 +49,7 @@ func (s *Set) Add(items ...any) bool {
     }
 
     for _, i := range(items) {
+        // struct{}{} is a struct{} instance
         s.m[i] = struct{}{}
     }
 
@@ -116,5 +117,4 @@ func (s *Set) String() string {
 
     return fmt.Sprintf("Set{%s}", strings.Join(items, ", "))
 }
-
 
