@@ -3,7 +3,7 @@ package set
 
 import "sync"
 import "fmt"
-import "strings"
+import "bytes"
 
 type any interface{}
 
@@ -52,13 +52,13 @@ func (s *Set) Add(items ...any) bool {
     defer s.Unlock()
 
     // If any item of items is not legal, return false
-    for _, i := range(items) {
+    for _, i := range items {
         if IsLegal(i) == false {
             return false
         }
     }
 
-    for _, i := range(items) {
+    for _, i := range items {
         // struct{}{} is a struct{} instance
         s.m[i] = struct{}{}
     }
@@ -119,6 +119,8 @@ func (s *Set) Equals(another *Set) bool {
 
 
 func (s *Set) Len() int {
+    s.RLock()
+    defer s.RUnlock()
     return len(s.m)
 }
 
@@ -131,16 +133,17 @@ func (s *Set) Clear() {
 
 
 func (s *Set) IsEmpty() bool {
-    if len(s.m) == 0 {
-    return true
-    }
-    return false
+    return s.Len() == 0
 }
 
 
 func (s *Set) List() []any {
-    var l []any
-    for i := range(s.m) {
+    s.RLock()
+    defer s.RUnlock()
+
+    l := make([]any, 0, s.Len())
+
+    for i := range s.m {
         l = append(l, i)
     }
     return l
@@ -148,12 +151,22 @@ func (s *Set) List() []any {
 
 
 func (s *Set) String() string {
-    items := make([]string, 0, s.Len())
+    s.RLock()
+    defer s.RUnlock()
 
-    for i := range(s.m) {
-        items = append(items, fmt.Sprintf("%v", i))
+    var buf bytes.Buffer
+    buf.WriteString("Set{")
+
+    first := true
+    for i := range s.m {
+        if first {
+            first = false
+        } else {
+            buf.WriteString(", ")
+        }
+        buf.WriteString(fmt.Sprintf("%v", i))
     }
-
-    return fmt.Sprintf("Set{%s}", strings.Join(items, ", "))
+    buf.WriteString("}")
+    return buf.String()
 }
 
