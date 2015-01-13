@@ -27,10 +27,20 @@ func IsLegal(v any) bool {
     return false
 }
 
+
+// Create a new Set
 func New() *Set {
     s := &Set{}
     s.m = make(map[any]struct{})
     return s
+}
+
+
+// Create a new Set and add some items.
+func NewSet(items ...any) (s *Set, ok bool) {
+    s = New()
+    ok = s.Add(items...)
+    return
 }
 
 
@@ -70,11 +80,13 @@ func (s *Set) MustAdd(items ...any) {
     }
 }
 
+
 func (s *Set) Remove(item any) {
     s.Lock()
     s.Unlock()
     delete(s.m, item)
 }
+
 
 func (s *Set) Has(item any) bool {
     s.RLock()
@@ -83,15 +95,40 @@ func (s *Set) Has(item any) bool {
     return ok
 }
 
+
+func (s *Set) Equals(another *Set) bool {
+    s.RLock()
+    defer s.RUnlock()
+
+    if another == nil {
+        return false
+    }
+
+    if s.Len() != another.Len() {
+        return false
+    }
+
+    for key := range s.m {
+        if !another.Has(key) {
+            return false
+        }
+    }
+
+    return true
+}
+
+
 func (s *Set) Len() int {
     return len(s.m)
 }
+
 
 func (s *Set) Clear() {
     s.Lock()
     defer s.Unlock()
     s.m = make(map[any]struct{})
 }
+
 
 func (s *Set) IsEmpty() bool {
     if len(s.m) == 0 {
@@ -100,6 +137,7 @@ func (s *Set) IsEmpty() bool {
     return false
 }
 
+
 func (s *Set) List() []any {
     var l []any
     for i := range(s.m) {
@@ -107,6 +145,7 @@ func (s *Set) List() []any {
     }
     return l
 }
+
 
 func (s *Set) String() string {
     items := make([]string, 0, s.Len())
