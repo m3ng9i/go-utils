@@ -44,6 +44,16 @@ func NewSet(items ...any) (s *Set, ok bool) {
 }
 
 
+// Create a new Set and add some items. Panic if not success.
+func MustNew(items ...any) *Set {
+    s, ok := NewSet(items...)
+    if !ok {
+        panic(fmt.Errorf("Create Set failed"))
+    }
+    return s
+}
+
+
 // Add item(s) to set.
 // If there's an item that is not a legal type, return false
 // If success, return true
@@ -81,10 +91,13 @@ func (s *Set) MustAdd(items ...any) {
 }
 
 
-func (s *Set) Remove(item any) {
+func (s *Set) Remove(items ...any) {
     s.Lock()
     s.Unlock()
-    delete(s.m, item)
+
+    for _, i := range items {
+        delete(s.m, i)
+    }
 }
 
 
@@ -93,28 +106,6 @@ func (s *Set) Has(item any) bool {
     defer s.RUnlock()
     _, ok := s.m[item]
     return ok
-}
-
-
-func (s *Set) Equals(another *Set) bool {
-    s.RLock()
-    defer s.RUnlock()
-
-    if another == nil {
-        return false
-    }
-
-    if s.Len() != another.Len() {
-        return false
-    }
-
-    for key := range s.m {
-        if !another.Has(key) {
-            return false
-        }
-    }
-
-    return true
 }
 
 
@@ -170,3 +161,121 @@ func (s *Set) String() string {
     return buf.String()
 }
 
+
+func (s *Set) Clone() *Set {
+    s.RLock()
+    defer s.RUnlock()
+
+    n, _ := NewSet(s.List()...)
+    return n
+}
+
+
+func Equals(s1, s2 *Set) bool {
+
+    if s1 == nil && s2 == nil {
+        return true
+    }
+
+    if s1 == nil || s2 == nil {
+        return false
+    }
+
+    s1.RLock()
+    defer s1.RUnlock()
+    s2.RLock()
+    defer s2.RUnlock()
+
+    if s1.Len() != s2.Len() {
+        return false
+    }
+
+    for key := range s1.m {
+        if !s2.Has(key) {
+            return false
+        }
+    }
+
+    return true
+}
+
+
+// Determine if Set s is superset of Set a
+func IsSuperset(s1, s2 *Set) bool {
+
+    if s1 == nil || s2 == nil {
+        return false
+    }
+
+    s1.RLock()
+    defer s1.RUnlock()
+    s2.RLock()
+    defer s2.RUnlock()
+
+    s1Len := s1.Len()
+    s2Len := s2.Len()
+
+    if s1Len == 0 || s1Len == s2Len {
+        return false
+    }
+
+    if s1Len > 0 && s2Len == 0 {
+        return true
+    }
+
+    for _, v := range s2.List() {
+        if !s1.Has(v) {
+            return false
+        }
+    }
+
+    return true
+}
+
+
+func Union(s ...*Set) *Set {
+
+    n := New()
+
+    for _, i := range s {
+        if i == nil {
+            continue
+        }
+
+        i.RLock()
+        defer i.RUnlock()
+
+        n.Add(i.List()...)
+    }
+
+    return n
+}
+
+
+func Intersect(s ...*Set) *Set {
+
+    if len(s) == 0 {
+        return New()
+    }
+
+    n := s[0]
+
+    for _, i:= range s[1:] {
+        if i == nil {
+            return nil
+        }
+
+        i.RLock()
+        defer i.RUnlock()
+
+        t := New()
+        for _, v := range i.List() {
+            if n.Has(v) {
+                t.Add(v)
+            }
+        }
+        n = t
+    }
+
+    return n
+}
