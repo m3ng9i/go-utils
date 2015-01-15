@@ -55,8 +55,8 @@ func MustNew(items ...any) *Set {
 
 
 // Add item(s) to set.
-// If there's an item that is not a legal type, return false
-// If success, return true
+// If there's an item that is not a legal type, return false.
+// If success, return true.
 func (s *Set) Add(items ...any) bool {
     s.Lock()
     defer s.Unlock()
