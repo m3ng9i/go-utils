@@ -136,6 +136,31 @@ func ExampleNew_another() {
 }
 
 
+func ExampleNew_handle() {
+
+    // Define a function to do some custom work.
+    var handle Handle
+    handle.Func = func(msg Message) {
+        time.Sleep(2 * time.Second)
+        if msg.Level >= WARN {
+            fmt.Println("haha:", msg.Msg)
+        }
+    }
+    handle.Level = WARN
+
+    logger, err := New(os.Stdout, Config{}, handle)
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
+    defer logger.Wait()
+    logger.Debug("debug")
+    logger.Info("info")
+    logger.Warn("warn")
+    logger.Error("error")
+}
+
+
 // Benchmark for writing log to stdout.
 func BenchmarkLoggerStdout(b *testing.B) {
 
