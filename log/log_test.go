@@ -4,6 +4,7 @@ import "testing"
 import "os"
 import "io/ioutil"
 import "fmt"
+import "time"
 
 func TestLoggerStdout(t *testing.T) {
     var config Config
@@ -208,3 +209,24 @@ func BenchmarkLoggerFile(b *testing.B) {
         logger.Wait()
 }
 
+
+func BenchmarkMsg2bytes(b *testing.B) {
+    b.StopTimer()
+
+        var m Message
+        m.Time = time.Now()
+        m.Msg = "Test message. Test message. Test message. Test message. Test message. Test message."
+        m.Level = INFO
+
+        logger, err := New(os.Stdout, Config{})
+        if err != nil {
+            b.Error(err)
+            b.Fail()
+        }
+
+    b.StartTimer()
+
+        for i := 0; i < b.N; i++ {
+            logger.msg2bytes(m)
+        }
+}

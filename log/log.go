@@ -160,7 +160,7 @@ func OpenFile(filename string, filemode ...os.FileMode) (*os.File, error) {
 
 
 // ------------------------------------------------
-// Logger
+// Config
 
 
 type Config struct {
@@ -174,18 +174,39 @@ type Config struct {
 }
 
 
+// ------------------------------------------------
+// Message
+
+
+type Message struct {
+    Msg string
+    Time time.Time
+    Level int
+}
+
+
+// make a new Message
+func newMsg(s string, level int) Message {
+
+    var m Message
+    m.Time = time.Now()
+
+    m.Level = level
+    m.Msg = s
+
+    return m
+}
+
+
+// ------------------------------------------------
+// Logger
+
+
 type Logger struct {
     Config
     w io.Writer
     jobs chan Message
     wg  sync.WaitGroup
-}
-
-
-type Message struct {
-    Msg []byte
-    Time time.Time
-    Level int
 }
 
 
@@ -270,7 +291,7 @@ func (this *Logger) start() {
             }
 
             lastMsgTime = msg.Time
-            this.w.Write(msg.Msg)
+            this.w.Write(this.msg2bytes(msg))
             this.wg.Done()
         }
     }()
@@ -337,49 +358,34 @@ func (this *Logger) rotateName(filename, timestr string) string {
 }
 
 
-func (this *Logger) msg(s string, level ...int) Message {
-
-    var m Message
-    m.Time = time.Now()
+func (this *Logger) msg2bytes(m Message) []byte {
 
     if this.Utc {
         m.Time = m.Time.UTC()
     }
 
-    var nowstring, lev string
+    replacer := strings.NewReplacer("{time}", m.Time.Format(this.TimeFormat), 
+                    "{level}", level2string(m.Level),
+                    "{msg}", m.Msg)
+    s := replacer.Replace(this.LayoutStyle)
 
-    if this.Layout & LY_TIME > 0 {
-        nowstring = m.Time.Format(this.TimeFormat)
-    }
-
-    if this.Layout & LY_LEVEL > 0 {
-        if len(level) > 0 {
-            lev = level2string(level[0])
-            m.Level = level[0]
-        } else {
-            lev = level2string(DEBUG)
-            m.Level = DEBUG
-        }
-    }
-
-    replacer := strings.NewReplacer("{time}", nowstring, "{level}", lev, "{msg}", s)
-    s = replacer.Replace(this.LayoutStyle)
+    var b []byte
     if len(s) > 0 && s[len(s)-1] != '\n' {
-        m.Msg = []byte(s + "\n")
+        b = []byte(s + "\n")
     } else {
-        m.Msg = []byte(s)
+        b = []byte(s)
     }
 
-    return m
+    return b
 }
 
 
 // implement for io.Writer
 func (this *Logger) Write(b []byte) (int, error) {
-    msg := this.msg(string(b), INFO)
+    m := newMsg(string(b), INFO)
     this.wg.Add(1)
-    this.jobs <- msg
-    return len(msg.Msg), nil
+    this.jobs <- m
+    return len(m.Msg), nil
 }
 
 
@@ -387,10 +393,10 @@ func (this *Logger) Print(level int, v ...interface{}) (int, error) {
     if level < this.Level {
         return 0, nil
     }
-    msg := this.msg(fmt.Sprint(v...), level)
+    m := newMsg(fmt.Sprint(v...), level)
     this.wg.Add(1)
-    this.jobs <- msg
-    return len(msg.Msg), nil
+    this.jobs <- m
+    return len(m.Msg), nil
 }
 
 
@@ -398,10 +404,10 @@ func (this *Logger) Printf(level int, format string, v ...interface{}) (int, err
     if level < this.Level {
         return 0, nil
     }
-    msg := this.msg(fmt.Sprintf(format, v...), level)
+    m := newMsg(fmt.Sprintf(format, v...), level)
     this.wg.Add(1)
-    this.jobs <- msg
-    return len(msg.Msg), nil
+    this.jobs <- m
+    return len(m.Msg), nil
 }
 
 
