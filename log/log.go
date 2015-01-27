@@ -149,7 +149,7 @@ func setConfigDefault(config *Config) {
 }
 
 
-// open a file to write log
+// Open a file to write log
 func OpenFile(filename string, filemode ...os.FileMode) (*os.File, error) {
     var mode os.FileMode = 0640
     if len(filemode) > 0 {
@@ -185,7 +185,7 @@ type Message struct {
 }
 
 
-// make a new Message
+// Make a new Message structure.
 func newMsg(s string, level int) Message {
 
     var m Message
@@ -199,19 +199,30 @@ func newMsg(s string, level int) Message {
 
 
 // ------------------------------------------------
-// Logger
+// Handle
 
+
+// User defined function.
+type Handle struct {
+    Func func(Message)  // User defined function for log message process.
+    Level int           // Messages of "Level" and above could be processed by "Func" function.
+}
+
+
+// ------------------------------------------------
+// Logger
 
 type Logger struct {
     Config
     w io.Writer
     jobs chan Message
     wg  sync.WaitGroup
+    handle *Handle
 }
 
 
 // Create a Logger.
-func New(w io.Writer, config Config) (logger *Logger, err error) {
+func New(w io.Writer, config Config, handle ...Handle) (logger *Logger, err error) {
     logger = new(Logger)
 
     setConfigDefault(&config)
@@ -244,6 +255,18 @@ func New(w io.Writer, config Config) (logger *Logger, err error) {
         }
     }
 
+    // set user defined function
+    if len(handle) > 0 {
+        if handle[0].Func == nil {
+            err = errors.New("Handle function could not be nil.")
+            return
+        }
+        if !isLevelLegal(handle[0].Level) {
+            err = fmt.Errorf("Log level of handle function is not legal: %d", handle[0].Level)
+            return
+        }
+        logger.handle = &handle[0]
+    }
 
     logger.Config   = config
     logger.w        = w
@@ -262,7 +285,16 @@ func (this *Logger) start() {
         for {
             msg := <- this.jobs
 
-            // check if need to rotate file log
+            // Call user defined function as needed.
+            if this.handle != nil && msg.Level >= this.handle.Level {
+                this.wg.Add(1)
+                go func() {
+                    (*this.handle).Func(msg)
+                    this.wg.Done()
+                }()
+            }
+
+            // Check if need to rotate file log
             if this.Rotate > R_NONE && !lastMsgTime.IsZero() {
                 timestr := this.ifRotate(lastMsgTime, msg.Time)
 
