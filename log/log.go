@@ -50,12 +50,12 @@ const (
 )
 
 
-// Rotate config when outputing to a regular file.
+// Rotate config for log file.
 const (
-    R_NONE = iota   // Don't rotate.
-    R_HOUR          // Rotate every hour. 
-    R_DAY           // Rotate every day.
-    R_MONTH         // Rotate every month.
+    R_NONE = iota   // Don't rename log file.
+    R_HOURLY        // Rename log file every hour.
+    R_DAILY         // Rename log file every day.
+    R_MONTHLY       // Rename log file every month.
 )
 
 
@@ -100,7 +100,7 @@ func isLayoutLegal(layout int, style string) error {
 
 
 func isRotateLegal(rotate int) bool {
-    return (rotate >= R_NONE && rotate <= R_MONTH)
+    return (rotate >= R_NONE && rotate <= R_MONTHLY)
 }
 
 
@@ -160,7 +160,7 @@ func OpenFile(filename string, filemode ...os.FileMode) (*os.File, error) {
 
 
 // ------------------------------------------------
-// Logger
+// Config
 
 
 type Config struct {
@@ -169,23 +169,44 @@ type Config struct {
     Layout          int             // Log message layout element.
     Level           int             // Log level.
     Utc             bool            // If use utc time in output.
-    Rotate          int             // How to rotate file log.
+    Rotate          int             // How to rotate file log. See R_NONE, R_HOURLY, R_DAILY and R_MONTHLY.
     RotatePattern   string          // Filename rotate pattern of a file log. See RP_DEFAULT for example.
 }
+
+
+// ------------------------------------------------
+// Message
+
+
+type Message struct {
+    Msg string
+    Time time.Time
+    Level int
+}
+
+
+// make a new Message
+func newMsg(s string, level int) Message {
+
+    var m Message
+    m.Time = time.Now()
+
+    m.Level = level
+    m.Msg = s
+
+    return m
+}
+
+
+// ------------------------------------------------
+// Logger
 
 
 type Logger struct {
     Config
     w io.Writer
-    jobs chan message
+    jobs chan Message
     wg  sync.WaitGroup
-}
-
-
-type message struct {
-    msg []byte
-    mtime time.Time
-    level int
 }
 
 
@@ -226,7 +247,7 @@ func New(w io.Writer, config Config) (logger *Logger, err error) {
 
     logger.Config   = config
     logger.w        = w
-    logger.jobs     = make(chan message, maxJobs)
+    logger.jobs     = make(chan Message, maxJobs)
 
     logger.start()
 
@@ -243,7 +264,7 @@ func (this *Logger) start() {
 
             // check if need to rotate file log
             if this.Rotate > R_NONE && !lastMsgTime.IsZero() {
-                timestr := this.ifRotate(lastMsgTime, msg.mtime)
+                timestr := this.ifRotate(lastMsgTime, msg.Time)
 
                 // now rotate
                 if timestr != "" {
@@ -269,8 +290,8 @@ func (this *Logger) start() {
                 }
             }
 
-            lastMsgTime = msg.mtime
-            this.w.Write(msg.msg)
+            lastMsgTime = msg.Time
+            this.w.Write(this.msg2bytes(msg))
             this.wg.Done()
         }
     }()
@@ -292,11 +313,11 @@ func (this *Logger) ifRotate(last, current time.Time) string {
     var format string
 
     switch this.Rotate {
-        case R_HOUR:
+        case R_HOURLY:
             format = "2006-01-02_15"
-        case R_DAY:
+        case R_DAILY:
             format = "2006-01-02"
-        case R_MONTH:
+        case R_MONTHLY:
             format = "2006-01"
     }
 
@@ -337,49 +358,34 @@ func (this *Logger) rotateName(filename, timestr string) string {
 }
 
 
-func (this *Logger) msg(s string, level ...int) message {
-
-    var m message
-    m.mtime = time.Now()
+func (this *Logger) msg2bytes(m Message) []byte {
 
     if this.Utc {
-        m.mtime = m.mtime.UTC()
+        m.Time = m.Time.UTC()
     }
 
-    var nowstring, lev string
+    replacer := strings.NewReplacer("{time}", m.Time.Format(this.TimeFormat), 
+                    "{level}", level2string(m.Level),
+                    "{msg}", m.Msg)
+    s := replacer.Replace(this.LayoutStyle)
 
-    if this.Layout & LY_TIME > 0 {
-        nowstring = m.mtime.Format(this.TimeFormat)
-    }
-
-    if this.Layout & LY_LEVEL > 0 {
-        if len(level) > 0 {
-            lev = level2string(level[0])
-            m.level = level[0]
-        } else {
-            lev = level2string(DEBUG)
-            m.level = DEBUG
-        }
-    }
-
-    replacer := strings.NewReplacer("{time}", nowstring, "{level}", lev, "{msg}", s)
-    s = replacer.Replace(this.LayoutStyle)
+    var b []byte
     if len(s) > 0 && s[len(s)-1] != '\n' {
-        m.msg = []byte(s + "\n")
+        b = []byte(s + "\n")
     } else {
-        m.msg = []byte(s)
+        b = []byte(s)
     }
 
-    return m
+    return b
 }
 
 
 // implement for io.Writer
 func (this *Logger) Write(b []byte) (int, error) {
-    msg := this.msg(string(b), INFO)
+    m := newMsg(string(b), INFO)
     this.wg.Add(1)
-    this.jobs <- msg
-    return len(msg.msg), nil
+    this.jobs <- m
+    return len(m.Msg), nil
 }
 
 
@@ -387,10 +393,10 @@ func (this *Logger) Print(level int, v ...interface{}) (int, error) {
     if level < this.Level {
         return 0, nil
     }
-    msg := this.msg(fmt.Sprint(v...), level)
+    m := newMsg(fmt.Sprint(v...), level)
     this.wg.Add(1)
-    this.jobs <- msg
-    return len(msg.msg), nil
+    this.jobs <- m
+    return len(m.Msg), nil
 }
 
 
@@ -398,10 +404,10 @@ func (this *Logger) Printf(level int, format string, v ...interface{}) (int, err
     if level < this.Level {
         return 0, nil
     }
-    msg := this.msg(fmt.Sprintf(format, v...), level)
+    m := newMsg(fmt.Sprintf(format, v...), level)
     this.wg.Add(1)
-    this.jobs <- msg
-    return len(msg.msg), nil
+    this.jobs <- m
+    return len(m.Msg), nil
 }
 
 
@@ -457,12 +463,50 @@ func (this *Logger) Errorf(format string, v ...interface{}) {
 
 func (this *Logger) Fatal(v ...interface{}) {
     this.Print(FATAL, v...)
+    this.Wait()
     os.Exit(1)
 }
 
 
 func (this *Logger) Fatalf(format string, v ...interface{}) {
     this.Printf(FATAL, format, v...)
+    this.Wait()
     os.Exit(1)
 }
 
+
+// --------------------------------------------
+// stdLogger
+
+
+var stdLogger *Logger
+
+
+func init() {
+
+    var config Config
+    config.LayoutStyle  = LS_SIMPLE
+    config.Layout       = LY_TIME
+    config.Level        = INFO
+
+    var err error
+
+    stdLogger, err = New(os.Stdout, config)
+    if err != nil {
+        panic(err.Error())
+    }
+}
+
+
+// Output log message directly into stdout.
+func Output(v ...interface{}) {
+    stdLogger.Info(v...)
+    stdLogger.Wait()
+}
+
+
+// Output log message directly into stdout, like fmt.Printf.
+func Outputf(format string, v ...interface{}) {
+    stdLogger.Infof(format, v...)
+    stdLogger.Wait()
+}

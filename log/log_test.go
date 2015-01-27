@@ -83,7 +83,36 @@ func TestLoggerFile(t *testing.T) {
 }
 
 
-func ExampleLogger() {
+func TestSimpleLogger(t *testing.T) {
+    Output("std logger")
+    Outputf("std %s", "logger")
+}
+
+
+func ExampleNew() {
+
+    file, err := ioutil.TempFile("", "test_log_")
+    if err != nil {
+        fmt.Println(os.Stderr, err)
+        os.Exit(1)
+    }
+
+    var config Config
+    config.Level = INFO
+    config.Rotate = R_HOURLY
+
+    logger, err := New(file, config)
+    if err != nil {
+        fmt.Println(os.Stderr, err)
+        os.Exit(1)
+    }
+    defer logger.Wait()
+
+    logger.Info("something happens")
+}
+
+
+func ExampleNew_another() {
 
     var config Config
     config.Layout        = LY_LEVEL
@@ -104,28 +133,6 @@ func ExampleLogger() {
     // Output: DEBUG: Test Debug().
     // INFO: Test Info(). abc123
     // WARN: Test Warn(). string
-}
-
-
-func ExampleLogger_ifRotate() {
-
-    file, err := ioutil.TempFile("", "test_log_")
-    if err != nil {
-        fmt.Println(err)
-        os.Exit(1)
-    }
-
-    logger, err := New(file, Config{Rotate:R_DAY})
-    if err != nil {
-        fmt.Println(err)
-        os.Exit(1)
-    }
-
-    t1, _ := time.Parse("2006-01-02 15:04:05", "2015-01-26 13:58:44")
-    t2, _ := time.Parse("2006-01-02 15:04:05", "2015-02-27 13:59:44")
-
-    fmt.Println(logger.ifRotate(t1, t2))
-    // Output: 2015-01-26
 }
 
 
@@ -202,3 +209,24 @@ func BenchmarkLoggerFile(b *testing.B) {
         logger.Wait()
 }
 
+
+func BenchmarkMsg2bytes(b *testing.B) {
+    b.StopTimer()
+
+        var m Message
+        m.Time = time.Now()
+        m.Msg = "Test message. Test message. Test message. Test message. Test message. Test message."
+        m.Level = INFO
+
+        logger, err := New(os.Stdout, Config{})
+        if err != nil {
+            b.Error(err)
+            b.Fail()
+        }
+
+    b.StartTimer()
+
+        for i := 0; i < b.N; i++ {
+            logger.msg2bytes(m)
+        }
+}
