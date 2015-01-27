@@ -121,7 +121,7 @@ func ExampleLogger_ifRotate() {
         os.Exit(1)
     }
 
-    logger, err := New(file, Config{Rotate:R_DAY})
+    logger, err := New(file, Config{Rotate:R_DAYLY})
     if err != nil {
         fmt.Println(err)
         os.Exit(1)

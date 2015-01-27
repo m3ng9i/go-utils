@@ -53,9 +53,9 @@ const (
 // Rotate config when outputing to a regular file.
 const (
     R_NONE = iota   // Don't rotate.
-    R_HOUR          // Rotate every hour. 
-    R_DAY           // Rotate every day.
-    R_MONTH         // Rotate every month.
+    R_HOURLY        // Rotate every hour.
+    R_DAYLY         // Rotate every day.
+    R_MONTHLY       // Rotate every month.
 )
 
 
@@ -100,7 +100,7 @@ func isLayoutLegal(layout int, style string) error {
 
 
 func isRotateLegal(rotate int) bool {
-    return (rotate >= R_NONE && rotate <= R_MONTH)
+    return (rotate >= R_NONE && rotate <= R_MONTHLY)
 }
 
 
@@ -292,11 +292,11 @@ func (this *Logger) ifRotate(last, current time.Time) string {
     var format string
 
     switch this.Rotate {
-        case R_HOUR:
+        case R_HOURLY:
             format = "2006-01-02_15"
-        case R_DAY:
+        case R_DAYLY:
             format = "2006-01-02"
-        case R_MONTH:
+        case R_MONTHLY:
             format = "2006-01"
     }
 
@@ -457,12 +457,14 @@ func (this *Logger) Errorf(format string, v ...interface{}) {
 
 func (this *Logger) Fatal(v ...interface{}) {
     this.Print(FATAL, v...)
+    this.Wait()
     os.Exit(1)
 }
 
 
 func (this *Logger) Fatalf(format string, v ...interface{}) {
     this.Printf(FATAL, format, v...)
+    this.Wait()
     os.Exit(1)
 }
 
