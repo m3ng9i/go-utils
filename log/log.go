@@ -466,3 +466,39 @@ func (this *Logger) Fatalf(format string, v ...interface{}) {
     os.Exit(1)
 }
 
+
+// --------------------------------------------
+// stdLogger
+
+
+var stdLogger *Logger
+
+
+func init() {
+
+    var config Config
+    config.LayoutStyle  = LS_SIMPLE
+    config.Layout       = LY_TIME
+    config.Level        = INFO
+
+    var err error
+
+    stdLogger, err = New(os.Stdout, config)
+    if err != nil {
+        panic(err.Error())
+    }
+}
+
+
+// Output log message directly into stdout.
+func Output(v ...interface{}) {
+    stdLogger.Info(v...)
+    stdLogger.Wait()
+}
+
+
+// Output log message directly into stdout, like fmt.Printf.
+func Outputf(format string, v ...interface{}) {
+    stdLogger.Infof(format, v...)
+    stdLogger.Wait()
+}

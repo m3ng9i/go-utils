@@ -83,6 +83,12 @@ func TestLoggerFile(t *testing.T) {
 }
 
 
+func TestSimpleLogger(t *testing.T) {
+    Output("std logger")
+    Outputf("std %s", "logger")
+}
+
+
 func ExampleLogger() {
 
     var config Config
