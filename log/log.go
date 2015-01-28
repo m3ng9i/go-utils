@@ -282,16 +282,15 @@ func New(w io.Writer, config Config, handle ...Handle) (logger *Logger, err erro
 func (this *Logger) start() {
     go func() {
         var lastMsgTime time.Time
-        for {
-            msg := <- this.jobs
+        for msg := range this.jobs {
 
             // Call user defined function as needed.
             if this.handle != nil && msg.Level >= this.handle.Level {
                 this.wg.Add(1)
-                go func() {
-                    (*this.handle).Func(msg)
+                go func(m Message) {
+                    (*this.handle).Func(m)
                     this.wg.Done()
-                }()
+                }(msg)
             }
 
             // Check if need to rotate file log
