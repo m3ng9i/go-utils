@@ -86,6 +86,9 @@ func isLayoutLegal(layout int, style string) error {
         return errors.New("Layout style should include {msg}.")
     }
 
+    if layout == LY_MSGONLY {
+        return nil
+    }
 
     if layout & LY_TIME > 0 && !strings.Contains(style, "{time}") {
         return errors.New("Layout style should include {time}.")
@@ -288,8 +291,8 @@ func (this *Logger) start() {
             if this.handle != nil && msg.Level >= this.handle.Level {
                 this.wg.Add(1)
                 go func(m Message) {
+                    defer this.wg.Done()
                     (*this.handle).Func(m)
-                    this.wg.Done()
                 }(msg)
             }
 

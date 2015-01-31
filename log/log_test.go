@@ -148,7 +148,12 @@ func ExampleNew_handle() {
     }
     handle.Level = WARN
 
-    logger, err := New(os.Stdout, Config{}, handle)
+    var config Config
+    config.Layout = LY_MSGONLY
+    config.LayoutStyle = "{msg}"
+    config.Level = INFO
+
+    logger, err := New(os.Stdout, config, handle)
     if err != nil {
         fmt.Println(err)
         os.Exit(1)
@@ -158,6 +163,11 @@ func ExampleNew_handle() {
     logger.Info("info")
     logger.Warn("warn")
     logger.Error("error")
+    // Output: info
+    // warn
+    // error
+    // haha: warn
+    // haha: error
 }
 
 
