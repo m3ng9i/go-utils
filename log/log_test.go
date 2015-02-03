@@ -36,6 +36,36 @@ func TestLoggerStdout(t *testing.T) {
 }
 
 
+func TestLoggerStdout2(t *testing.T) {
+    var config Config
+    config.Rotate = R_HOURLY
+    config.RotatePattern = RP_DEFAULT
+    _, err := New(os.Stdout, config)
+    if err == nil {
+        t.Fail()
+    }
+    if err.Error() != "Stdout or stderr could not be rotated." {
+        t.Error(err)
+        t.Fail()
+    }
+}
+
+
+func TestLoggerStdout3(t *testing.T) {
+    var config Config
+    config.Rotate = R_NONE
+    config.RotatePattern = RP_DEFAULT
+    _, err := New(os.Stdout, config)
+    if err == nil {
+        t.Fail()
+    }
+    if err.Error() != "Rotate pattern does not match rotate value." {
+        t.Error(err)
+        t.Fail()
+    }
+}
+
+
 // Test to write log to a temporary file.
 func TestLoggerFile(t *testing.T) {
     file, err := ioutil.TempFile("", "test_log_")

@@ -119,6 +119,21 @@ func isRotatePatternLegal(pattern string) error {
 }
 
 
+// Check if a writer is legal. Argument "rotate" is a value of Config.Rotate.
+func ifWriterLegal(w io.Writer, rotate int) error {
+    if rotate > R_NONE {
+        file, ok := w.(*os.File)
+        if !ok {
+            return errors.New("Writer is not file, could not be rotated.")
+        }
+        if file == os.Stdout || file == os.Stderr {
+            return errors.New("Stdout or stderr could not be rotated.")
+        }
+    }
+    return nil
+}
+
+
 func level2string(level int) string {
     switch level {
         case DEBUG: return "DEBUG"
@@ -245,16 +260,20 @@ func New(w io.Writer, config Config, handle ...Handle) (logger *Logger, err erro
         return
     }
 
+    err = ifWriterLegal(w, config.Rotate) 
+    if err != nil {
+        return
+    }
+
     if config.Rotate > R_NONE {
-        _, ok := w.(*os.File)
-        if !ok {
-            config.Rotate = R_NONE
-            config.RotatePattern = ""
-        } else {
-            err = isRotatePatternLegal(config.RotatePattern)
-            if err != nil {
-                return
-            }
+        err = isRotatePatternLegal(config.RotatePattern)
+        if err != nil {
+            return
+        }
+    } else {
+        if len(config.RotatePattern) > 0 {
+            err = errors.New("Rotate pattern does not match rotate value.")
+            return
         }
     }
 
