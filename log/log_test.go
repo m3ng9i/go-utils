@@ -157,11 +157,15 @@ func ExampleNew_another() {
         os.Exit(1)
     }
     logger.Debug("Test Debug().")
-    logger.Info("Test Info(). ", "abc", 123)
+    logger.Notice("Test Notice().")
+    logger.Noticef("Test Noticef(). %s", "xyz")
+    logger.Info("Test Info(). ", "abc", 456)
     logger.Warnf("Test Warn(). %s", "string")
     logger.Wait()
     // Output: DEBUG: Test Debug().
-    // INFO: Test Info(). abc123
+    // NOTICE: Test Notice().
+    // NOTICE: Test Noticef(). xyz
+    // INFO: Test Info(). abc456
     // WARN: Test Warn(). string
 }
 

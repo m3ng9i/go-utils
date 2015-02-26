@@ -17,6 +17,7 @@ import "path/filepath"
 // Log level.
 const (
     DEBUG = iota  // Record everything
+    NOTICE
     INFO
     WARN
     ERROR
@@ -136,11 +137,12 @@ func ifWriterLegal(w io.Writer, rotate int) error {
 
 func level2string(level int) string {
     switch level {
-        case DEBUG: return "DEBUG"
-        case INFO:  return "INFO"
-        case WARN:  return "WARN"
-        case ERROR: return "ERROR"
-        case FATAL: return "FATAL"
+        case DEBUG:     return "DEBUG"
+        case NOTICE:    return "NOTICE"
+        case INFO:      return "INFO"
+        case WARN:      return "WARN"
+        case ERROR:     return "ERROR"
+        case FATAL:     return "FATAL"
     }
     return ""
 }
@@ -481,6 +483,16 @@ func (this *Logger) Debug(v ...interface{}) {
 
 func (this *Logger) Debugf(format string, v ...interface{}) {
     this.Printf(DEBUG, format, v...)
+}
+
+
+func (this *Logger) Notice(v ...interface{}) {
+    this.Print(NOTICE, v...)
+}
+
+
+func (this *Logger) Noticef(format string, v ...interface{}) {
+    this.Printf(NOTICE, format, v...)
 }
 
 
