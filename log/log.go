@@ -14,15 +14,49 @@ import "path/filepath"
 // const
 
 
+type LevelType int
+
 // Log level.
 const (
-    DEBUG = iota  // Record everything
-    NOTICE
-    INFO
-    WARN
-    ERROR
-    FATAL
+    DEBUG   LevelType = iota  // Record everything
+    NOTICE  LevelType = iota
+    INFO    LevelType = iota
+    WARN    LevelType = iota
+    ERROR   LevelType = iota
+    FATAL   LevelType = iota
 )
+
+func (this LevelType) Legal() bool {
+    return (this >= DEBUG && this <= FATAL)
+}
+
+func (this LevelType) String() string {
+    switch this {
+        case DEBUG:     return "DEBUG"
+        case NOTICE:    return "NOTICE"
+        case INFO:      return "INFO"
+        case WARN:      return "WARN"
+        case ERROR:     return "ERROR"
+        case FATAL:     return "FATAL"
+    }
+    return ""
+}
+
+// convert a string to LevelType
+func String2Level(level string) (lev LevelType, ok bool) {
+    ok = true
+    level = strings.ToLower(level)
+    switch level {
+        case "debug"    : lev = DEBUG
+        case "notice"   : lev = NOTICE
+        case "info"     : lev = INFO
+        case "warn"     : lev = WARN
+        case "error"    : lev = ERROR
+        case "fatal"    : lev = FATAL
+        default         : ok = false
+    }
+    return
+}
 
 
 // Time format.
@@ -70,11 +104,6 @@ const maxJobs = 1024
 
 // ------------------------------------------------
 // Utils functions
-
-
-func isLevelLegal(level int) bool {
-    return (level >= DEBUG && level <= FATAL)
-}
 
 
 func isLayoutLegal(layout int, style string) error {
@@ -135,19 +164,6 @@ func ifWriterLegal(w io.Writer, rotate int) error {
 }
 
 
-func level2string(level int) string {
-    switch level {
-        case DEBUG:     return "DEBUG"
-        case NOTICE:    return "NOTICE"
-        case INFO:      return "INFO"
-        case WARN:      return "WARN"
-        case ERROR:     return "ERROR"
-        case FATAL:     return "FATAL"
-    }
-    return ""
-}
-
-
 // If a config element is zero value, set it to default.
 func setConfigDefault(config *Config) {
 
@@ -187,7 +203,7 @@ type Config struct {
     TimeFormat      string          // Time format in output log message.
     LayoutStyle     string          // Log messae layout style.
     Layout          int             // Log message layout element.
-    Level           int             // Log level.
+    Level           LevelType       // Log level.
     Utc             bool            // If use utc time in output.
     Rotate          int             // How to rotate file log. See R_NONE, R_HOURLY, R_DAILY and R_MONTHLY.
     RotatePattern   string          // Filename rotate pattern of a file log. See RP_DEFAULT for example.
@@ -201,12 +217,12 @@ type Config struct {
 type Message struct {
     Msg string
     Time time.Time
-    Level int
+    Level LevelType
 }
 
 
 // Make a new Message structure.
-func newMsg(s string, level int) Message {
+func newMsg(s string, level LevelType) Message {
 
     var m Message
     m.Time = time.Now()
@@ -225,7 +241,7 @@ func newMsg(s string, level int) Message {
 // User defined function.
 type Handle struct {
     Func func(Message)  // User defined function for log message process.
-    Level int           // Messages of "Level" and above could be processed by "Func" function.
+    Level LevelType     // Messages of "Level" and above could be processed by "Func" function.
 }
 
 
@@ -247,7 +263,7 @@ func New(w io.Writer, config Config, handle ...Handle) (logger *Logger, err erro
 
     setConfigDefault(&config)
 
-    if !isLevelLegal(config.Level) {
+    if !config.Level.Legal() {
         err = fmt.Errorf("Log level is not legal: %d", config.Level)
         return
     }
@@ -285,7 +301,7 @@ func New(w io.Writer, config Config, handle ...Handle) (logger *Logger, err erro
             err = errors.New("Handle function could not be nil.")
             return
         }
-        if !isLevelLegal(handle[0].Level) {
+        if !handle[0].Level.Legal() {
             err = fmt.Errorf("Log level of handle function is not legal: %d", handle[0].Level)
             return
         }
@@ -420,7 +436,7 @@ func (this *Logger) msg2bytes(m Message) []byte {
     }
 
     replacer := strings.NewReplacer("{time}", m.Time.Format(this.TimeFormat), 
-                    "{level}", level2string(m.Level),
+                    "{level}", m.Level.String(),
                     "{msg}", m.Msg)
     s := replacer.Replace(this.LayoutStyle)
 
@@ -444,7 +460,7 @@ func (this *Logger) Write(b []byte) (int, error) {
 }
 
 
-func (this *Logger) Print(level int, v ...interface{}) (int, error) {
+func (this *Logger) Print(level LevelType, v ...interface{}) (int, error) {
     if level < this.Level {
         return 0, nil
     }
@@ -455,7 +471,7 @@ func (this *Logger) Print(level int, v ...interface{}) (int, error) {
 }
 
 
-func (this *Logger) Printf(level int, format string, v ...interface{}) (int, error) {
+func (this *Logger) Printf(level LevelType, format string, v ...interface{}) (int, error) {
     if level < this.Level {
         return 0, nil
     }

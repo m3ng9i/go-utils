@@ -119,6 +119,27 @@ func TestSimpleLogger(t *testing.T) {
 }
 
 
+func TestLevelType(t *testing.T) {
+    var ok bool
+    _, ok = String2Level("DEBUG")
+    if !ok {
+        t.Fail()
+    }
+    _, ok = String2Level("notice")
+    if !ok {
+        t.Fail()
+    }
+    _, ok = String2Level("")
+    if ok {
+        t.Fail()
+    }
+    _, ok = String2Level("haha")
+    if ok {
+        t.Fail()
+    }
+}
+
+
 func ExampleNew() {
 
     file, err := ioutil.TempFile("", "test_log_")
