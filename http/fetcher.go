@@ -73,10 +73,10 @@ func (this *Fetcher) FetchAll(url string) (b []byte, err error) {
     }
 
     resp, err := client.Do(req)
-    defer resp.Body.Close()
     if err != nil {
         return
     }
+    defer resp.Body.Close()
 
     b, err = ioutil.ReadAll(resp.Body)
     return
