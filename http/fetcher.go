@@ -14,6 +14,8 @@ type ProxyConfig struct {
 }
 
 
+// Use golang.org/x/net/proxy package to make a socks5 client.
+// For more information, see DefaultTransport in net.http package.
 func Socks5Client(conf ProxyConfig) (client *http.Client, err error) {
 
     var proxyAuth *proxy.Auth
