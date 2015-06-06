@@ -38,7 +38,7 @@ func Socks5Client(conf ProxyConfig) (client *http.Client, err error) {
     }
 
     var transport http.RoundTripper = &http.Transport {
-        Proxy: http.ProxyFromEnvironment,
+        Proxy: nil,
         Dial: dialer.Dial,
         TLSHandshakeTimeout: 10 * time.Second,
     }
