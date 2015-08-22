@@ -11,7 +11,7 @@ import "io"
 type RequestId string
 
 
-/* 
+/*
 Create a function to generate random request ids.
 You can use parameter length to set the length of the result.
 The max length of result is 32.
