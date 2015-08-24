@@ -3,6 +3,10 @@ package http
 import "net"
 import "net/http"
 import "strings"
+import "mime"
+import "path/filepath"
+import "os"
+import "io"
 
 
 // Get client IP.
@@ -37,3 +41,48 @@ func QueryValue(r *http.Request, key string, defval ...string) string {
     }
     return strings.TrimSpace(q[length -1])
 }
+
+
+// Determine a file's content type, like: text/plain; charset=utf-8
+// Inspired by go's serveContent() in net/http package.
+// More information: src/pkg/net/http/fs.go
+func FileContentType(filename string) (string, error) {
+    ctype := mime.TypeByExtension(filepath.Ext(filename))
+    if ctype == "" {
+
+        file, err := os.Open(filename)
+        if err != nil {
+            return "", err
+        }
+        defer file.Close()
+
+        ctype, err = ContentType(file)
+        if err != nil {
+            return "", err
+        }
+
+    }
+
+    return ctype, nil
+}
+
+
+// Determine a data stream's content type, like: text/plain; charset=utf-8
+// Inspired by go's serveContent() in net/http package.
+// More information: src/pkg/net/http/fs.go
+func ContentType(reader io.ReadSeeker) (string, error) {
+    data := make([]byte, 512)
+
+    _, err := reader.Seek(0, os.SEEK_SET)
+    if err != nil {
+        return "", err
+    }
+
+    n, err := reader.Read(data)
+    if err != nil {
+        return "", err
+    }
+
+    return http.DetectContentType(data[:n]), nil
+}
+
