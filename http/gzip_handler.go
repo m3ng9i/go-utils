@@ -5,17 +5,25 @@ import "strings"
 import "io"
 import "compress/gzip"
 import "path"
+import "sync"
 import "github.com/m3ng9i/go-utils/possible"
 
 
-
-type GzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
+var gzipWriterPool = sync.Pool {
+    New: func() interface{} {
+        return gzip.NewWriter(nil)
+    },
 }
 
+
+type GzipResponseWriter struct {
+    io.Writer
+    http.ResponseWriter
+}
+
+
 func (w GzipResponseWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
+    return w.Writer.Write(b)
 }
 
 
@@ -62,10 +70,14 @@ func GzipHandler(fn http.HandlerFunc, checkQuery, checkName bool) http.HandlerFu
 
         w.Header().Set("Content-Encoding", "gzip")
 
-        gz := gzip.NewWriter(w)
-		defer gz.Close()
+        gz := gzipWriterPool.Get().(*gzip.Writer)
+        gz.Reset(w)
+        defer func() {
+            gz.Close()
+            gzipWriterPool.Put(gz)
+        }()
 
         gzWriter := GzipResponseWriter{Writer: gz, ResponseWriter: w}
-		fn(gzWriter, r)
+        fn(gzWriter, r)
     })
 }
