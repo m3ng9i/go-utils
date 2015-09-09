@@ -2,11 +2,13 @@ package http
 
 import "net"
 import "net/http"
+import "net/url"
 import "strings"
 import "mime"
 import "path/filepath"
 import "os"
 import "io"
+import "fmt"
 
 
 // Get client IP.
@@ -86,3 +88,14 @@ func ContentType(reader io.ReadSeeker) (string, error) {
     return http.DetectContentType(data[:n]), nil
 }
 
+
+// Write download header to the response writer. filename should not contains path.
+func WriteDownloadHeader(w http.ResponseWriter, filename string) {
+    filename = url.QueryEscape(filename)
+
+    // more about Content-Disposition, see rfc6226: http://tools.ietf.org/html/rfc6266
+    w.Header().Set("Content-Disposition",
+        fmt.Sprintf(`attachment; filename="%s"; filename*=utf-8''%s`, filename, filename))
+
+    w.Header().Set("Content-Type", "application/octet-stream")
+}
