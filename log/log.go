@@ -226,7 +226,6 @@ func newMsg(s string, level LevelType) Message {
 
     var m Message
     m.Time = time.Now()
-
     m.Level = level
     m.Msg = s
 
@@ -344,19 +343,19 @@ func (this *Logger) start() {
 
                     err := file.Close()
                     if err != nil {
-                        fmt.Println(os.Stderr, err)
+                        fmt.Fprintln(os.Stderr, err)
                     }
 
                     newFilename := this.rotateName(filename, timestr)
 
                     err = os.Rename(filename, newFilename)
                     if err != nil {
-                        fmt.Println(os.Stderr, err)
+                        fmt.Fprintln(os.Stderr, err)
                     }
 
                     this.w, err = OpenFile(filename)
                     if err != nil {
-                        fmt.Println(os.Stderr, err)
+                        fmt.Fprintln(os.Stderr, err)
                     }
                 }
             }
@@ -489,7 +488,7 @@ func (this *Logger) Wait() {
 
 
 // --------------------------------------------
-// 10 convenient method to output log message.
+// 10 convenient methods to output log message.
 
 
 func (this *Logger) Debug(v ...interface{}) {

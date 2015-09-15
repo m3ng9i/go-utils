@@ -144,7 +144,7 @@ func ExampleNew() {
 
     file, err := ioutil.TempFile("", "test_log_")
     if err != nil {
-        fmt.Println(os.Stderr, err)
+        fmt.Fprintln(os.Stderr, err)
         os.Exit(1)
     }
 
@@ -154,7 +154,7 @@ func ExampleNew() {
 
     logger, err := New(file, config)
     if err != nil {
-        fmt.Println(os.Stderr, err)
+        fmt.Fprintln(os.Stderr, err)
         os.Exit(1)
     }
     defer logger.Wait()
@@ -196,8 +196,8 @@ func ExampleNew_handle() {
     // Define a function to do some custom work.
     var handle Handle
     handle.Func = func(msg Message) {
-        time.Sleep(2 * time.Second)
-        if msg.Level >= WARN {
+        time.Sleep(1 * time.Second)
+        if msg.Level >= ERROR {
             fmt.Println("haha:", msg.Msg)
         }
     }
@@ -221,7 +221,6 @@ func ExampleNew_handle() {
     // Output: info
     // warn
     // error
-    // haha: warn
     // haha: error
 }
 
