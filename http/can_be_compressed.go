@@ -85,7 +85,7 @@ func CanBeCompressed(filename string) possible.Possible {
 
     for _, value := range []string { "video/", "audio/", "image/", "compressed" } {
         if strings.Contains(tp, value) {
-            return possible.Yes
+            return possible.No
         }
     }
 
