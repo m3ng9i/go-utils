@@ -14,9 +14,15 @@ type DigestAuth struct {
 }
 
 
-type ErrMsgTitleBody struct {
+type AuthTitleBody struct {
     Title string
     Body string
+}
+
+
+type AuthFile struct {
+    ContentType string  // content type of 401 file
+    Body []byte         // content of 401 file
 }
 
 
@@ -27,9 +33,12 @@ const html401 = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="vi
 func errorHandler(err interface{}) func(w http.ResponseWriter) {
 
     var msg string
+    var msgFile *AuthFile
 
-    if val, ok := err.(ErrMsgTitleBody); ok {
+    if val, ok := err.(AuthTitleBody); ok {
         msg = fmt.Sprintf(html401, val.Title, val.Body)
+    } else if val, ok := err.(*AuthFile); ok && val != nil {
+        msgFile = val
     } else if val, ok := err.(string); ok {
         msg = val
     } else {
@@ -37,10 +46,18 @@ func errorHandler(err interface{}) func(w http.ResponseWriter) {
         msg = fmt.Sprintf(html401, "401 Unauthorized", "<h1>401 Unauthorized</h1>")
     }
 
-    return func(w http.ResponseWriter) {
-        w.Header().Set("Content-Type", "text/html; charset=utf-8")
-        w.WriteHeader(http.StatusUnauthorized)
-        w.Write([]byte(msg))
+    if msgFile != nil {
+        return func(w http.ResponseWriter) {
+            w.Header().Set("Content-Type", msgFile.ContentType)
+            w.WriteHeader(http.StatusUnauthorized)
+            w.Write(msgFile.Body)
+        }
+    } else {
+        return func(w http.ResponseWriter) {
+            w.Header().Set("Content-Type", "text/html; charset=utf-8")
+            w.WriteHeader(http.StatusUnauthorized)
+            w.Write([]byte(msg))
+        }
     }
 }
 
@@ -56,12 +73,14 @@ Parameters:
 
 Type of failMsg could be ErrMsgTitleBody or string.
 
-    1. If failMsg is type of ErrMsgTitleBody, set failMsg.Title and failMsg.Body as
+    1. If failMsg is type of AuthTitleBody, set failMsg.Title and failMsg.Body as
     html page's title and body, and write to ResponseWriter.
 
-    2. If failMsg is type of string, write the string as html to ResponseWriter.
+    2. If failMsg is type of *AuthFile, write the file to ResponseWriter.
 
-    3. Otherwise, set "401 Unauthorized" as html page's title and body, and write
+    3. If failMsg is type of string, write the string as html to ResponseWriter.
+
+    4. Otherwise, set "401 Unauthorized" as html page's title and body, and write
     the html to ResponseWriter.
 
     See errorHandler function for more information.
