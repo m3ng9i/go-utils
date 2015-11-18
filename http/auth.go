@@ -1,5 +1,7 @@
 package http
 
+import "crypto/sha1"
+import "encoding/base64"
 import "fmt"
 import "net/http"
 import "github.com/abbot/go-http-auth"
@@ -11,6 +13,12 @@ type DigestAuth struct {
     Secret                  auth.SecretProvider     // return ha1 for authentication success, return empty string for authentication failed
     ClientCacheSize         int                     // see "go-http-auth" package for more information
     ClientCacheTolerance    int                     // see "go-http-auth" package for more information
+}
+
+
+type BasicAuth struct {
+    Realm  string              // Authentication realm
+    Secret auth.SecretProvider // return empty string for authentication failed, return non-empty string for success
 }
 
 
@@ -170,5 +178,40 @@ func (a *DigestAuth) DigestAuthWrap(handler http.HandlerFunc) http.HandlerFunc {
         authenticator.ClientCacheTolerance = a.ClientCacheTolerance
     }
     return authenticator.JustCheck(handler)
+}
+
+
+// return a secret function used for basic authentication, this function use sha1 hash
+func BasicAuthSecret(username, password string) func (string, string) string {
+    return func(user, realm string) string {
+        if user == username {
+            sha1sum := sha1.New()
+            sha1sum.Write([]byte(password))
+            return "{SHA}" + base64.StdEncoding.EncodeToString(sha1sum.Sum(nil))
+        }
+        return ""
+    }
+}
+
+
+func (a *BasicAuth) BasicAuthHandler(handler http.HandlerFunc, failMsg interface{}, failFunc func()) http.HandlerFunc {
+    authenticator := auth.NewBasicAuthenticator(a.Realm, a.Secret)
+
+    errHandler := errorHandler(failMsg)
+
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        ctx := authenticator.NewContext(context.Background(), r)
+
+        authInfo := auth.FromContext(ctx)
+        authInfo.UpdateHeaders(w.Header())
+        if authInfo == nil || !authInfo.Authenticated {
+            if failFunc != nil {
+                failFunc()
+            }
+            errHandler(w)
+            return
+        }
+        handler(w, r)
+    })
 }
 
