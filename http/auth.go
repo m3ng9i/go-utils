@@ -37,8 +37,8 @@ type AuthFile struct {
 const html401 = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="initial-scale=1,width=device-width"><title>%s</title><body>%s</body></html>`
 
 
-// errorHandler return a function for writing 401 error message to http.ResponseWriter
-func errorHandler(err interface{}) func(w http.ResponseWriter) {
+// ErrorHandler401 return a function for writing 401 error message to http.ResponseWriter
+func ErrorHandler401(err interface{}) func(w http.ResponseWriter) {
 
     var msg string
     var msgFile *AuthFile
@@ -91,7 +91,7 @@ Type of failMsg could be ErrMsgTitleBody or string.
     4. Otherwise, set "401 Unauthorized" as html page's title and body, and write
     the html to ResponseWriter.
 
-    See errorHandler function for more information.
+    See ErrorHandler401 function for more information.
 
 Example:
 
@@ -149,7 +149,7 @@ func (a *DigestAuth) DigestAuthHandler(handler http.HandlerFunc, failMsg interfa
         authenticator.ClientCacheTolerance = a.ClientCacheTolerance
     }
 
-    errHandler := errorHandler(failMsg)
+    errHandler := ErrorHandler401(failMsg)
 
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         ctx := authenticator.NewContext(context.Background(), r)
@@ -197,7 +197,7 @@ func BasicAuthSecret(username, password string) func (string, string) string {
 func (a *BasicAuth) BasicAuthHandler(handler http.HandlerFunc, failMsg interface{}, failFunc func()) http.HandlerFunc {
     authenticator := auth.NewBasicAuthenticator(a.Realm, a.Secret)
 
-    errHandler := errorHandler(failMsg)
+    errHandler := ErrorHandler401(failMsg)
 
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         ctx := authenticator.NewContext(context.Background(), r)
